@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	<title>Урок</title>
+    <link rel="stylesheet" href="build/editingStyles.css">
+	<link rel="stylesheet" href="scripts/animate.css-3.7.2.min.css">
+    <script defer src="scripts/jquery-3.4.1.min.js"></script>
+	<script defer src="scripts/jquery.textillate-0.4.0.js"></script>
+	<script defer src="scripts/jquery.lettering-0.7.0.js"></script>
+
+    <style id="user-css-output" type="text/css">
+
+    #editPanel {
+        z-index: 10;
+        display: block !important;
+    }     
+        #viewingPanel
+        {
+            position:fixed;
+            top:0px;
+            bottom:0px;
+            left:0px;
+            right:0px;
+            overflow: hidden;
+        }
+           
+        #viewingPanel iframe
+        {
+            width:100%;
+            height:100%;
+            overflow: hidden;
+            border: 0px solid black;
+        }
+
+        #pagenumber {
+            position: absolute;
+            right: 10px;
+            bottom: 10px;
+            width: 50px;
+            height: 20px;
+            z-index: 10;
+            text-align: right;
+            vertical-align: bottom;
+            font-size: medium;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        #protector {
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1;
+            background: transparent;
+            display: none !important;/* Мешает на маке*/
+        }
+
+        body
+        {
+            background-color:white;
+            padding:0px;
+            overflow:hidden;
+        }
+
+        @font-face {
+            font-family: "Akzidenz";
+            src: url("https://aclass.exitiv.dev/files/fonts/Akzidenz-Grotesk.ttf");
+        }
+
+        @font-face {
+            font-family: "Clarendon";
+            src: url("https://aclass.exitiv.dev/files/fonts/SPSL-Clarendon.otf");
+        }
+
+        @font-face {
+            font-family: "Propisi";
+            src: url("https://aclass.exitiv.dev/files/fonts/Propisi.ttf");
+        }
+  </style>
+</head>
+<body>
+
+<div id="viewingPanel">
+	<iframe id="mainFrame" src="" style='display:none' allow="fullscreen">
+    </iframe>
+    <div id="pagenumber">
+        -
+    </div>
+</div>
+<div class="go-to-slide" hidden>
+    <input type="text" class="go-to-slide-btn js-setSlide" placeholder="Перейти на слайд №">
+</div>
+
+<div class="go-to-slide js-setSlide"></div>
+<div id="protector"></div>
+<div id="editPanel" style="border-radius: 25px; background-color: hotpink; border: 2px solid transparent; padding: 20px;  height:200px; left: 0px; right:0px; position:absolute; bottom: 0px;">
+    <table>
+        <tr>
+            <td>
+                <input type="button" value="Показать все" onclick="showAll()">
+            </td>
+            <td>
+                <input type="button" value="Начало анимации" onclick="resetAnim()">
+            </td>
+            <td>
+                <input type="button" value="Следующая анимация" onclick="nextAnim()">
+            </td>
+            <td>
+                <input type="button" value="Предыдущий слайд" onclick="prevSlide()">
+            </td>
+            <td>
+                <input type="button" value="Следующий слайд" onclick="nextSlide()">
+            </td>
+            <td>
+                <input type="button" value="Обновить слайд" onclick="resetSlide()">
+            </td>
+            <td>
+                <input type="button" class="editPanel_-hide-btn js-hide" value="Скрыть меню">
+            </td>
+        </tr>
+    </table>
+    <div id="lblMsg" style="color:red">
+    </div>
+    <div id="lblObjName">
+    </div>
+    <table>
+        <tr>
+            <td>
+                Протестировать анимацию на объекте
+            </td>
+            <td>
+                <select id="animlist" onChange="comboAnimTest(this)">
+                    <option>-</option>
+                </select>
+
+                <select id="speedlist" onChange="comboAnimTest(this)">
+                    <option>-</option>
+                    <option>faster</option>
+                    <option>fast</option>
+                    <option>slow</option>
+                    <option>slower</option>
+                </select>
+            </td>
+            <td>
+                Текст
+            </td>
+            <td>
+                <select id="textList" onChange="comboAnimTest(this)">
+                    <option>-</option>
+                </select>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Звук (выберите папку, Chrome-only)
+            </td>
+            <td>
+                <input id="audioEdit" type="file" webkitdirectory="" directory="">
+            </td>
+            <td>
+                <select id="audioList" onChange="comboAnimTest(this)">
+                    <option>-</option>                 
+                </select>
+            </td>
+        </tr>
+    </table>
+    <input type="button" value="Cкопировать элемент в буфер" onclick="copyAnim()">
+</div>
+<script> 
+ 
+    function getAllUrlParams(url) {
+        var queryString = url ? url.split('?')[1] : window.location.search.slice(1);
+        var obj = {};
+        if (queryString) {
+            queryString = queryString.split('#')[0];
+            var arr = queryString.split('&');
+            for (var i = 0; i < arr.length; i++) {
+                var a = arr[i].split('=');
+                var paramName = a[0];
+                var paramValue = typeof (a[1]) === 'undefined' ? true : a[1];
+                paramName = paramName.toLowerCase();
+                //if (typeof paramValue === 'string') paramValue = paramValue.toLowerCase();
+                if (paramName.match(/\[(\d+)?\]$/)) {
+                var key = paramName.replace(/\[(\d+)?\]/, '');
+                if (!obj[key]) obj[key] = [];
+
+                if (paramName.match(/\[\d+\]$/)) {
+                    var index = /\[(\d+)\]/.exec(paramName)[1];
+                    obj[key][index] = paramValue;
+                } else {
+                    obj[key].push(paramValue);
+                }
+                } else {
+                if (!obj[paramName]) {
+                    obj[paramName] = paramValue;
+                } else if (obj[paramName] && typeof obj[paramName] === 'string'){
+                    obj[paramName] = [obj[paramName]];
+                    obj[paramName].push(paramValue);
+                } else {
+                    obj[paramName].push(paramValue);
+                }
+                }
+            }
+        }
+        return obj;
+    }
+
+    const anims = ["fadeIn","fadeOut","slideInLeft","slideInRight","slideInDown","slideInUp",
+        "slideOutLeft","slideOutRight","slideOutDown","slideOutUp","flipInX","flipInY","flipOutX",
+        "flipOutY","bounce","flash","pulse","rubberBand","shake","headShake","swing","tada","wobble",
+        "jello","hinge","jackInTheBox","heartBeat","bounceIn","bounceInDown","bounceInLeft","bounceInRight",
+        "bounceInUp","bounceOut","bounceOutDown","bounceOutLeft","bounceOutRight","bounceOutUp",
+        "fadeInDown","fadeInLeft","fadeInRight","fadeInUp","fadeInDownBig","fadeInLeftBig","fadeInRightBig",
+        "fadeInUpBig","fadeOutDown","fadeOutUp","fadeOutLeft","fadeOutRight","fadeOutDownBig","fadeOutUpBig",
+        "fadeOutLeftBig","fadeOutRightBig","lightSpeedIn","lightSpeedOut","rotateIn","rotateInDownLeft",
+        "rotateInDownRight","rotateInUpLeft","rotateInUpRight","rotateOut","rotateOutDownLeft","rotateOutDownRight",
+        "rotateOutUpLeft","rotateOutUpRight","rollIn","rollOut","zoomIn","zoomInDown","zoomInLeft",
+        "zoomInUp","zoomInRight","zoomOut","zoomOutDown","zoomOutLeft","zoomOutUp","zoomOutRight"];
+
+    const soundsDirGlobal = 'sounds/';
+    const soundsDirPreview = 'sounds/';
+    let soundsDir = '../../../../../../sounds/';
+    // let soundsDir = '../../sounds/';
+    let slides = getAllUrlParams().slides;
+    if (slides) {
+        slides = decodeURIComponent(getAllUrlParams().slides).replace(/['"]+/g, '').split(',');
+    } 
+    let dir = getAllUrlParams().dir;
+    if (dir) {
+        dir = decodeURIComponent(getAllUrlParams().dir).replace(/['"]+/g, '');
+        if (dir.length > 0) {
+            if (dir.substr(dir.length - 1) != '/') {
+              dir = dir + '/';
+            }
+        }
+    }
+    else {
+        dir = '';
+    }
+    let progToken = getAllUrlParams().token;
+    let editMode = getAllUrlParams().edit;
+    let colorsMode = getAllUrlParams().colors;
+    let noFS = getAllUrlParams().nofs;
+    let returnUrl = getAllUrlParams().returnurl;
+    let currentSlide = 0;
+    let currentAnimations = null;
+    let loadedSlide = false;
+    let backSkip = -1;
+
+    if (editMode) {
+        document.getElementById("viewingPanel").style.bottom = '100px';
+        document.getElementById("editPanel").style.height = '80px';
+        document.getElementById("editPanel").style.display = 'block';
+        document.getElementById("protector").style.bottom = '100px';
+        document.getElementById("protector").style.display='none';
+    } else {
+        document.getElementById("viewingPanel").style.bottom = '0px';
+        document.getElementById("editPanel").style.height = '0px';
+        document.getElementById("protector").style.bottom = '0px';
+        document.getElementById("editPanel").style.display = 'none';
+        document.getElementById("protector").style.display='block';
+    }
+    if (colorsMode) {
+        const goToSlideBtnEl = document.querySelector('.go-to-slide');
+        goToSlideBtnEl.removeAttribute('hidden');
+    }
+
+	const btnBackPressed = (keyCode1) => {
+		return keyCode1 === 37 || keyCode1 === 40 || keyCode1 === 33;
+	};
+	const btnForwardPressed = (keyCode1) => {
+		return keyCode1 === 38 || keyCode1 === 39 || keyCode1 === 44;
+	};
+
+    function goToSlide() {
+    const findSlide = this.value;
+    const choiceSlide = Number(findSlide) - 1;
+    this.value = '';
+    if(findSlide > slides.length) {
+        this.classList.add('error-input');
+        this.setAttribute('placeholder', 'Нет такого слайда');
+    }
+    else {
+        this.classList.remove('error-input');
+        this.setAttribute('placeholder', 'Перейти на слайд №');
+        slides.forEach((el,index) => {
+        if (index === choiceSlide) {
+            currentSlide = index;
+            let tmpSlide = typeof(currentSlide) === 'string' ? parseInt(currentSlide) : currentSlide;
+            tmpSlide++;
+            document.getElementById('pagenumber').innerHTML = '' + tmpSlide;
+            document.getElementById('mainFrame').src = "";
+            document.getElementById('mainFrame').src = `${dir}${slides[index]}/${slides[index]}.html`;
+        }
+        else return false;
+        })
+    }
+}
+    
+    function getFrameDoc() {
+        return document.getElementById('mainFrame').contentWindow; 
+    }
+    
+    function showEditMsg(msg) {
+        $('#lblMsg').hide();
+        document.getElementById('lblMsg').innerHTML = msg;
+        $('#lblMsg').fadeIn(500);        
+        setTimeout(function() {$('#lblMsg').fadeOut(500);}, 1500);
+    }
+
+    function showAll() {
+        getFrameDoc().showAll();
+    }
+
+    function resetAnim() {
+        getFrameDoc().resetAnimation();
+    }
+
+    function nextAnim() {
+        if (getFrameDoc().canAnimNext()) {
+            getFrameDoc().invokeNextAnim();
+        }
+        else {
+            showEditMsg('Нет других анимаций');
+        }
+    }
+
+    function prevSlide() {
+        if (currentSlide == 0) {
+            showEditMsg('Это и есть первый слайд');
+        }
+        else {
+            currentSlide--;
+            setSlide();
+        }
+    }
+
+    function resetSlide() {
+        setSlide();
+    }
+
+    function nextSlide() {
+        if (currentSlide < slides.length - 1) {
+            currentSlide++;
+            setSlide();
+        }
+        else {
+            showEditMsg('Это и есть последний слайд');
+        }
+    }
+
+    function getTestAnimString() {
+        const animlist = document.getElementById('animlist');
+        const speedlist = document.getElementById('speedlist');
+        const textList = document.getElementById('textList');
+        const animType = animlist.options[animlist.selectedIndex].innerHTML;        
+        const animSpeed = speedlist.options[speedlist.selectedIndex].innerHTML;
+        const textType = textList.options[textList.selectedIndex].innerHTML;   
+        const audioList = document.getElementById('audioList');
+        const audio = audioList.options[audioList.selectedIndex].innerHTML;
+        return {
+            anim: animType.length > 1 ? (typeof animSpeed == 'undefined' || animSpeed == "-" ? animType : animType + " " + animSpeed) : "",
+            audio: audio.length > 1 ? audio : "",
+            text: typeof textType == 'undefined' || textType == "-" ? "" : textType
+        };
+    }
+
+    function copyAnim() {
+        const objName = '#'+document.getElementById('lblObjName').innerHTML;
+        const animReal = getTestAnimString();
+
+        const obj = {
+            id: objName,
+            style: animReal.anim,
+            sound: animReal.audio,
+            text: animReal.text,
+        }
+        copyTextToClipboard(JSON.stringify(obj, null, "\t"));
+        showEditMsg('Скопирован в буфер обмена '+objName);
+    }
+
+    function comboAnimTest(thelist) {
+        const animReal = getTestAnimString();
+        const objName = '#'+document.getElementById('lblObjName').innerHTML;
+        showEditMsg(objName+'  ANIM:'+animReal.anim+' SND:'+animReal.audio+' TXT:'+animReal.text);
+        if ((animReal.anim && animReal.anim != '') || (animReal.text && animReal.text != '')) {
+            if (animReal.audio) {
+                let sound = new Audio();
+                sound.src = soundsDir+animReal.audio;
+                sound.autoplay = true;
+            }
+            getFrameDoc().testAnim(objName, animReal.anim, animReal.text);
+        }
+    }
+
+    function fallbackCopyTextToClipboard(text) {
+        var textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            var successful = document.execCommand('copy');
+            var msg = successful ? 'successful' : 'unsuccessful';
+            console.log('Fallback: Copying text command was ' + msg);
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err);
+        }
+
+        document.body.removeChild(textArea);
+    }
+    function copyTextToClipboard(text) {
+        if (!navigator.clipboard) {
+            fallbackCopyTextToClipboard(text);
+            return;
+        }
+        navigator.clipboard.writeText(text).then(function() {
+            console.log('Async: Copying to clipboard was successful!');
+        }, function(err) {
+            console.error('Async: Could not copy text: ', err);
+        });
+    }
+
+    function sendCurrentProgress() {
+        if (progToken && progToken != "") {
+            try {
+                var xhr = new XMLHttpRequest();
+                var url = 'https://aclass.school/api/saveProgress';
+                var body =  '{\"token\":\"'+decodeURIComponent(progToken)+'\",\"progress\":'+currentSlide+'}';
+                console.log('body: '+body);
+                xhr.open('POST', url, true);
+                xhr.setRequestHeader('Content-Type', 'application/json');
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState == XMLHttpRequest.DONE) {
+                        console.log(xhr.responseText);
+                    }
+                }
+                xhr.send(body);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+    }
+
+    function mainNextSlide() {
+        $("#mainFrame").fadeOut(100, function() {
+            sendCurrentProgress();
+            /*setSlide();
+            if (currentSlide >= slides.length) {
+                if (returnUrl)
+                    window.location.href = decodeURIComponent(returnUrl);
+                else
+                    window.close();
+            }*/
+
+
+            if (currentSlide >= slides.length) {
+                if (returnUrl)
+                    window.location.href = decodeURIComponent(returnUrl);
+                else
+                    window.close();
+            }
+            else {
+                currentSlide++;
+                setSlide();
+            }
+        });
+    }
+
+    function zoomer() {
+        const documentHeight = 1080;//$(document).height();
+        const documentWidth = 1920;//$(document).width();
+        const windowHeight = $(window).height()
+        const windowWidth = $(window).width()
+        const x = documentWidth / windowWidth;
+        const y = documentHeight / windowHeight;
+        const scale = x > y ? x : y;
+        const w = Math.floor(documentWidth / scale);
+        const h = Math.floor(documentHeight / scale);
+        const dx = (windowWidth - w) / 2;
+        const dy = (windowHeight - h) / 2;
+        $('#viewingPanel').css({
+            'position': 'fixed',
+            'left': dx+'px',
+            'right': dx+'px',
+            'top': dy+'px',
+            'bottom': dy+'px',
+            'overflow': 'hidden'
+        })
+        $('#pagenumber').css({
+            'bottom': (dy+10)+'px',
+        })
+    }
+
+
+    function init() {
+        const inputFind = document.querySelector('.js-setSlide').addEventListener('change', goToSlide);
+        console.log(currentAnimations)
+        zoomer()
+        $(window).resize(() => {
+            zoomer()
+        })
+
+        if (editMode){
+            var animList = document.getElementById("animlist");
+            var textList = document.getElementById("textList");
+            anims.forEach(anim => {
+                var opt = document.createElement("option");
+                opt.text = anim;
+                animList.add(opt);
+                var opt2 = document.createElement("option");
+                opt2.text = anim;
+                textList.add(opt2);
+            });
+
+            document.getElementById('audioEdit').addEventListener('change', (e)=>{
+                $("#audioList").empty().append("<option>-</option>");
+                var audioList = document.getElementById("audioList");
+                alert('gotcha'+e.target.files.length);
+                for(var i = 0; i < e.target.files.length; i++) {
+                    var opt = document.createElement("option");
+                    opt.text = e.target.files[i].name;
+                    audioList.add(opt);
+                };
+            });
+        }
+
+        $("body").on('keydown', (eventObject) => {
+            let keyCode1 = eventObject.which;
+
+            if (!loadedSlide)
+                return;
+
+            if (noFS != 1) {
+                try {
+                    fullScreen(document.documentElement);
+                }catch {
+                }
+            }
+
+            if (btnBackPressed(keyCode1)) {
+                if (getFrameDoc().isFirstAnim() && currentSlide > 0) {
+                    $("#mainFrame").fadeOut(100, function() {
+                        currentSlide += backSkip;
+                        setSlide();
+                    });
+                    return;
+                }
+                setSlide();
+                //getFrameDoc().resetAnimation();
+                return;
+            }
+            
+            if (btnForwardPressed(keyCode1)) {
+                if (getFrameDoc().canAnimNext()) {
+                    getFrameDoc().invokeNextAnim();
+                }
+                else if (loadedSlide) {
+                    mainNextSlide();
+                }
+            };
+        });
+    }
+
+    function setSlide() {
+
+        loadedSlide = false;
+        let tmpSlide = typeof(currentSlide) === 'string' ? parseInt(currentSlide) : currentSlide;
+        tmpSlide++;
+        // getSlidesCount();
+        console.log(slides.length);
+        console.log(tmpSlide);
+        console.log(currentSlide);
+
+
+        if (currentSlide == slides.length - 1) {
+           // alert("Вы достигли конечного слайда!");
+            document.getElementById('pagenumber').innerHTML = ''+tmpSlide;
+            document.getElementById('mainFrame').src = "";
+            document.getElementById('mainFrame').src = `${dir}${slides[currentSlide]}/${slides[currentSlide]}.html`;
+        }
+        else {
+            if (currentSlide <slides.length) {
+                document.getElementById('pagenumber').innerHTML = ''+tmpSlide;
+                document.getElementById('mainFrame').src = "";
+                document.getElementById('mainFrame').src = `${dir}${slides[currentSlide]}/${slides[currentSlide]}.html`;
+            }
+        }
+    }
+
+    function fullScreen(element) {
+        if(element.requestFullscreen) {
+            element.requestFullscreen();
+        } else if(element.webkitrequestFullscreen) {
+            element.webkitRequestFullscreen();
+        } else if(element.mozRequestFullscreen) {
+            element.mozRequestFullScreen();
+        }
+    }
+
+    var eventMethod = window.addEventListener ? "addEventListener" : "attachEvent";
+	var eventer = window[eventMethod];
+	var messageEvent = eventMethod === "attachEvent" ? "onmessage" : "message";
+	eventer(messageEvent, function (e) {
+		if (e.data || e.message) {
+            const data = e.data ? e.data : e.message;
+            if (data.msg === 'clicked') {
+                document.getElementById('lblObjName').innerHTML = data.objId;
+            }
+            else if (data.msg === 'playSound') {
+                let sound = new Audio();
+                sound.src = soundsDirGlobal+data.sound;
+                sound.autoplay = true;
+            }
+        }
+    });
+
+    function getAnims()
+    {
+        return anims;
+    }
+
+    window.onload=function() {
+
+        init();
+        document.getElementById('mainFrame').onload = function() {
+            $.getJSON( `${dir}${slides[currentSlide]}/${slides[currentSlide]}.json`, function( data ) {
+                if (noFS != 1) {
+                    try {
+                        fullScreen(document.documentElement);
+                    }catch {
+                    }
+                }
+                currentAnimations = data.animations;
+
+                if (typeof currentAnimations === 'undefined')
+                    currentAnimations = [];
+
+                if (data.backSkip) {
+                    backSkip = data.backSkip;
+                }
+                var $doc = $(getFrameDoc().document);
+                var elements = getFrameDoc().document.body.getElementsByTagName("script");
+                if (typeof elements !== 'undefined') {
+                    for (var k = elements.length - 1; k >= 0; k--) {
+                        var item = elements[k];
+                        item.parentNode.removeChild(item);
+                    }
+                }
+                $doc.find('body').append(`<script>
+                        function resetAnim(objName) {
+                            $(objName).removeClass($(objName).attr('class').split(' ').pop());
+                            $(objName).removeClass($(objName).attr('class').split(' ').pop());
+                            /*$(objName).removeClass("animated");
+                            $(objName).removeClass("faster");
+                            $(objName).removeClass("slower");
+                            $(objName).removeClass("fast");
+                            $(objName).removeClass("slow");*/
+                            parent.getAnims().forEach(anim => {
+                                $(objName).removeClass(anim);
+                            });
+                        }
+                    <\/script>`);
+                if (editMode) {
+                    $doc.find('body').append(`<script>
+                    $('div').on("click", function () {
+                        const $obj = $(this);
+                        $(this).fadeOut(200, function() {
+                            $obj.hide();
+                            $obj.fadeIn(200, function() {$obj.show();});
+                        });
+                        parent.postMessage({msg: "clicked", objId: $(this).attr('id')}, "*");
+                    });
+                    function resetElem($elem) {
+                        $elem.before($elem.clone(true));
+                        var $newElem = $elem.prev();
+                        $elem.remove();
+                        return $newElem;
+                    }
+                    function testAnim(objName, animType, textType) {
+                        if (animType && animType != "") {
+                            resetAnim(objName);
+                            resetElem($(objName));
+                            $(objName).addClass('animated '+animType);
+                        }
+                        if (textType && textType != "") {
+                            $(objName).textillate({
+                                    loop: false,
+                                    autoStart: false,
+                                    in: {
+                                        effect: textType,
+                                        sync: false,
+                                        reverse: false
+                                    }
+                            });
+                            $(objName).textillate('in');
+                        }
+                    }
+                    <\/script>`);
+                }
+                $doc.find('body').append(`<script>
+        $(document).ready(function () {
+            $('html').css({
+                'height': 100 + '%',
+                'width': 100 + '%',
+                'display': 'flex',
+                'justify-content': 'center',
+                'align-items': 'center',
+                'font-size': 30 + 'px',
+                'overflow': 'hidden'
+        })
+
+
+    zoomer2()
+    
+    $(window).off("resize");
+
+    $(window).resize((evt) => {
+        zoomer2()
+    })
+
+    function zoomer2() {
+        $('body').css({
+            'transform': 'translate(-50%, -50%) scale('+$(window).width()/1920+')',
+            'position': 'absolute',
+            'left': '50%',
+            'top': '50%',
+            'overflow': 'hidden'
+        })
+    }
+        
+    })
+
+    let animCounter = 0;
+    let animations = null;
+    let animCount = 0;
+    let animNumber = 0;
+    let sounds = [];
+    let lastTime = 0;
+    
+    function nextSlide() {
+        if (currentSlide < slides.length - 1) {
+            currentSlide++;
+            setSlide();
+            removeEditing();
+        }
+        else {
+            showEditMsg('Это и есть последний слайд');
+        }
+    }
+    
+    function showAll() {
+        if (animations != null) {
+            animations.forEach(animation => {	
+                $(animation.id).show();
+            });
+        }
+    }
+
+    function isFirstAnim() {
+        if (animNumber == 0 || animCount == 0) {
+            return true;
+        }
+        let lastAutoAnim = -1;
+        for (let i = 0; i < animations.length; i++) {
+            const animation = animations[i];
+            if (animation.autoStart != 1 && animation.next != 1 && animation.next != 2) {
+                break;
+            }
+            lastAutoAnim++;
+        }
+        if (lastAutoAnim >= 0 && lastAutoAnim + 1 >= animNumber) {
+            const nowDate = new Date();
+            if (nowDate.getTime() - lastTime < 1000) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function canAnimNext() {
+        return animNumber >= 0 && animNumber < animCount;
+    }
+
+	function resetAnimation() {
+        animNumber = 0;
+        if (animations == null || animations.length == 0)
+            animCount = 0;
+        else {
+            animCount = animations.length;
+            let alreadySet=[];
+            animations.forEach(animation => {	
+                if (alreadySet.includes(animation.id))
+                    return;
+                alreadySet.push(animation.id);
+                //const elName = animation.id.charAt(0) == '#' ? animation.id : '#' + animation.id;
+                const elName = animation.id;
+                if ($(elName).hasClass('animated') && animation.style && animation.style !== '')
+                    $(elName).removeClass('animated '+animation.style);
+                if (animation.noHide) {
+                    $(animation.id).show();
+                }
+                else
+                    $(animation.id).hide();
+            });
+            if (animations.length > 0 && animations[0].autoStart == 1) {
+                startAnim();
+            }
+        }
+    }
+
+    function prepareAnimation(slideAnimations) {
+        animations = slideAnimations;
+        if (animations && animations.length > 0) {
+            animations.forEach(animation => {
+                if (animation.sound && animation.sound !== '') {
+                    let sound = new Audio();
+                    if (animation.waitSound) {
+                        sound.onended = function() { animCounter--; }
+                    }
+                    sound.src = '${soundsDir}'+animation.sound;
+                    sound.autoplay = false;  
+                    sound.loop = animation.soundLoop == 1;
+                    sounds.push(sound); 
+                    $('#_idContainer103').on('click', () => {
+                        console.log('stop')
+                        sound.pause();
+                        sounds.length = 0;
+                        nextSlide();
+                    })     
+                }
+                else {
+                    sounds.push("-");
+                }
+            });
+        }
+
+        resetAnimation();
+    }
+
+    function startAnim() {
+        if (animNumber < 0 || !animations || animations.length == 0 || animNumber >= animations.length)
+            return;
+        lastTime = (new Date()).getTime();
+        animCounter++;
+        const animation = animations[animNumber];
+        const curSound = sounds[animNumber];
+        //const elName = animation.id.charAt(0) == '#' ? animation.id : '#' + animation.id;
+        const elName = animation.id;
+        const usedAnim = (animation.style && animation.style !== '') || (animation.text && animation.text !== '');
+        if (!$(elName).is(':visible') && usedAnim)
+            $(elName).show();
+            
+        function handleAnimationEnd(event = null) {
+            const data = event ? event.data : animation;
+            //const elNameData = data.id.charAt(0) == '#' ? data.id : '#' + data.id;
+            const elNameData = data.id;
+            if (data.next === 1)
+                animNumber++;
+            if (!data.text || data.text == '')
+                $(elNameData).unbind('animationend');
+            if (data.next === 1) 
+                startAnim();
+			if ((data.next && data.next > 0) || data.waitAnim)
+                animCounter--;
+        }
+
+        if (animation.text && animation.text !== '') {
+            $(elName).textillate({
+                    loop: false,
+                    autoStart: true,
+                    in: {
+                        effect: animation.text,
+                        delay: 750,
+                        sync: false,
+                        reverse: false,
+                        callback: handleAnimationEnd
+                    },
+                    type: 'char'
+            });
+
+            $(elName).textillate('start');
+        }
+        else if (animation.style && animation.style !== '') {
+            if ($(elName).hasClass('animated')) {
+                resetAnim(elName);
+            }
+            $(elName).addClass('animated '+animation.style);
+            $(elName).bind('animationend', animation, handleAnimationEnd);
+        }
+
+        if (!usedAnim || animation.next !== 1)
+            animNumber++;
+		if (!usedAnim || (!animation.next && !animation.waitAnim))
+            animCounter--;
+        if (animation.script) {
+            try {
+                window[animation.script]();
+            }
+            catch(e)   {
+                console.log(e);
+            }
+        }
+        if (animation.next === 2)
+            startAnim();
+        if (animation.soundGlobal && animation.soundGlobal != '') {
+            parent.postMessage({msg: "playSound", sound: animation.soundGlobal}, "*");
+        }
+        if (animation.video && animation.video === 1 ) {
+            try {
+                $(animation.id).get(0).play()
+            }
+            catch (e) {
+                console.log(e);
+            }
+        }
+        if (animation.sound && animation.sound !== '') {
+            if (animation.waitSound) {
+                animCounter++;
+            }
+            if (curSound && curSound !== '-') {
+                curSound.pause();
+                curSound.currentTime = 0;
+                curSound.play();
+            }
+        }
+    }
+
+    function invokeNextAnim() {
+        if (animCounter > 0)
+            return;
+        return startAnim();
+    }               
+                    <\/script>`);
+                getFrameDoc().prepareAnimation(currentAnimations);
+                loadedSlide = true;
+                $("#mainFrame").fadeIn();
+                if (data.autonext) {
+                    const curSlide = currentSlide;
+                    setTimeout(function () { if (currentSlide == curSlide) mainNextSlide(); }, data.autonext);
+                }
+            });
+        };
+
+        if (getAllUrlParams().json) {
+            const jsonName = decodeURIComponent(getAllUrlParams().json).replace(/['"]+/g, '');
+            $.getJSON( `${jsonName}.json`, function( data ) {
+                slides = data.slides;
+                if (typeof dir === 'undefined' || dir == '') {
+                    dir = data.dir;
+                    if (typeof dir === 'undefined') {
+                        dir = jsonName;
+                    }                    
+                    if (dir.length > 0) {
+                        if (dir.substr(dir.length - 1) != '/') {
+                            dir = dir + '/';
+                        }
+                    }
+                }
+                if (data.title) {
+                    window.document.title = data.title;
+                }          
+                if (data.sounds) {
+                    soundsDir = data.sounds;
+                    if (soundsDir.substr(soundsDir.length - 1) != '/') {
+                        soundsDir = soundsDir + '/';
+                    }
+                }    
+                if (data.noFS) {
+                    noFS = data.noFS; 
+                }
+                const startupSlide = getAllUrlParams().slide;
+                if (startupSlide) {
+                    currentSlide = startupSlide;
+                }
+                else {
+                    currentSlide = 0;
+                    sendCurrentProgress();
+                    setSlide();
+                }
+            });
+        }
+        else {
+            const startupSlide = getAllUrlParams().slide;
+            if (startupSlide)
+                currentSlide = startupSlide - 1;
+            setSlide();
+        }
+    }
+
+</script>
+
+<script defer src="build/editingStyles.js"></script>
+</body>
+</html> 
